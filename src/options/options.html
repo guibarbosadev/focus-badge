@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FocusBadge Options</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      h1 {
+        text-align: center;
+      }
+      label {
+        display: block;
+        margin: 10px 0 5px;
+      }
+      input {
+        padding: 5px;
+        width: 100%;
+        max-width: 300px;
+      }
+      button {
+        margin-top: 20px;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>FocusBadge Options</h1>
+    <form id="optionsForm">
+      <label for="site">Add site to block list:</label>
+      <input type="text" id="site" name="site" placeholder="E.g: youtube.com" />
+      <button type="submit">Save</button>
+    </form>
+    <script src="./options.js"></script>
+  </body>
+</html>
