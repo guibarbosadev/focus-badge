@@ -45,3 +45,42 @@ If you really want to stay focused, wear your badge with pride.
 - Node.js + Express (server)
 - RESTful API
 - Device-based session tracking
+
+## ✅  Minimal Version Checklist
+
+### 🔌 Offline Functionality (Client-side only)
+
+#### 💾 Session Setup (Local)
+- [ ] Save blocked sites list (locally)
+- [ ] Save custom device name
+- [ ] Save blocking time range
+- [ ] Generate a config hash (based on deviceId + config)
+
+#### 🚫 Site Blocking Logic
+- [ ] Block based on site list
+- [ ] Allow subdomain blocking (`*.domain.com`)
+- [ ] Block only during defined time range
+- [ ] Beautify the block page (custom HTML/CSS)
+
+#### 🔒 Session Rules & Integrity
+- [ ] Lock config after session starts (no edits allowed)
+- [ ] Allow only *new* domains to be added to block list
+- [ ] Prevent "pause" or reconfiguration during session
+- [ ] Detect reactivation (on re-enable/extension reload)
+- [ ] Store session info locally (even when offline)
+- [ ] Handle reboots or computer off scenarios gracefully
+
+---
+
+### 🌐 Backend Integration (API required)
+
+#### 🆕 Session Management
+- [ ] `POST /sessions/start` — Save new session
+- [ ] `POST /sessions/:id/send-ping` — Hourly ping to confirm session is alive
+- [ ] `POST /sessions/:id/mark-ok` — Mark session as successfully completed
+- [ ] `POST /sessions/:id/mark-stained` — Mark session as failed/interrupted
+- [ ] `POST /sessions/validate` — Extension checks if it should stain a session (e.g. on startup/reactivation)
+
+#### 📛 Public Badge
+- [ ] `GET /u/:deviceId` — Show public session status
+- [ ] Dynamic return HTML(/session/:sessionHash) returning  session status: `ok`, `stained`, `none`, as well the last check time
