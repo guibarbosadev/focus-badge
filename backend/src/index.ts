@@ -4,7 +4,6 @@ import {
     connectToDatabase,
     closeDatabaseConnection,
 } from "./config/database.js";
-import authRouter from "./routes/auth.js";
 
 dotenv.config();
 
@@ -15,11 +14,16 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
 // Auth routes
+import authRouter from "./routes/auth/index.js";
 app.use("/auth", authRouter);
 
-// Sessions routes
-import sessionsRouter from './routes/sessions.js';
-app.use('/sessions', sessionsRouter);
+// Session routes
+import sessionRouter from "./routes/sessions/index.js";
+app.use("/session", sessionRouter);
+
+// Badge routes
+import badgeRouter from "./routes/badge/index.js";
+app.use("/badge", badgeRouter);
 
 // Routes
 app.get("/", (req: Request, res: Response) => {

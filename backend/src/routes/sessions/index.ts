@@ -1,11 +1,11 @@
 import express, { Request, Response } from "express";
-import { getDatabase } from "../config/database.js";
-import { requireAuth } from "../middleware/authMiddleware.js";
-import type { SessionConfig } from "../../../common/src/index.js";
+import { getDatabase } from "../../config/database.js";
+import { requireAuth } from "../../middleware/authMiddleware.js";
+import type { SessionConfig } from "../../../../common/src/index.js";
 import type {
     SessionDocument,
     SessionBadge,
-} from "../../../common/src/session.js";
+} from "../../../../common/src/session.js";
 
 const router = express.Router();
 
