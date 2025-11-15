@@ -1,23 +1,29 @@
-export type SessionStatus = "scheduled" | "active" | "completed" | "stained" | "removed";
+export type SessionStatus =
+    | "scheduled"
+    | "active"
+    | "completed"
+    | "stained"
+    | "removed";
 
 export interface DeviceSpecs {
-  deviceId: string;
-  label?: string;
-  os?: string;
-  browser?: string;
+    deviceId: string;
+    label?: string;
+    os?: string;
+    browser?: string;
 }
 
 export interface SessionConfig {
-  id: string;
-  blockedSites: string[];
-  startDate: string;
-  lastCheckedAt?: string;
-  endDate?: string;
-  status: SessionStatus;
-  device: DeviceSpecs;
-  existsLocally: boolean;
+    id: string;
+    blockedSites: string[];
+    startDate: string;
+    lastCheckedAt?: string;
+    endDate?: string;
+    status: SessionStatus;
+    device: DeviceSpecs;
+    existsLocally: boolean;
 }
 
 export const VERSION = "0.0.0-development";
 
-export * from './auth';
+export * from "./auth";
+export * from "./session";

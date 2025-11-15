@@ -1,7 +1,10 @@
-import express, { Request, Response } from 'express';
-import dotenv from 'dotenv';
-import { connectToDatabase, closeDatabaseConnection } from './config/database.js';
-import authRouter from './routes/auth.js';
+import express, { Request, Response } from "express";
+import dotenv from "dotenv";
+import {
+    connectToDatabase,
+    closeDatabaseConnection,
+} from "./config/database.js";
+import authRouter from "./routes/auth.js";
 
 dotenv.config();
 
@@ -12,31 +15,36 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
 // Auth routes
-app.use('/auth', authRouter);
+app.use("/auth", authRouter);
+
+// Sessions routes
+import sessionsRouter from './routes/sessions.js';
+app.use('/sessions', sessionsRouter);
 
 // Routes
-app.get('/', (req: Request, res: Response) => {
-    res.json({ message: 'FocusBadge API is running' });
+app.get("/", (req: Request, res: Response) => {
+    res.json({ message: "FocusBadge API is running" });
 });
 
 // Only start server when not running tests. Jest sets `JEST_WORKER_ID` in the environment.
-const isTestEnv = process.env.JEST_WORKER_ID !== undefined || process.env.NODE_ENV === 'test';
+const isTestEnv =
+    process.env.JEST_WORKER_ID !== undefined || process.env.NODE_ENV === "test";
 if (!isTestEnv) {
     // Initialize database connection
     connectToDatabase().catch((error) => {
-        console.error('Failed to initialize database connection:', error);
+        console.error("Failed to initialize database connection:", error);
         process.exit(1);
     });
 
     // Graceful shutdown
-    process.on('SIGTERM', async () => {
-        console.log('SIGTERM received, shutting down gracefully');
+    process.on("SIGTERM", async () => {
+        console.log("SIGTERM received, shutting down gracefully");
         await closeDatabaseConnection();
         process.exit(0);
     });
 
-    process.on('SIGINT', async () => {
-        console.log('SIGINT received, shutting down gracefully');
+    process.on("SIGINT", async () => {
+        console.log("SIGINT received, shutting down gracefully");
         await closeDatabaseConnection();
         process.exit(0);
     });
@@ -48,4 +56,3 @@ if (!isTestEnv) {
 }
 
 export default app;
-
