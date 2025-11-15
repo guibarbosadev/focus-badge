@@ -1,14 +1,18 @@
 import request from 'supertest';
 import app from './index.js';
 import { connectToDatabase, closeDatabaseConnection } from './config/database.js';
+import * as dbModule from './config/database.js';
 
 describe('API Routes', () => {
     beforeAll(async () => {
-        // Connect to test database or mock connection
+        // Mock database connection in tests to avoid network calls
+        jest.spyOn(dbModule, 'connectToDatabase').mockImplementation(async () => {
+            return null as any;
+        });
+        jest.spyOn(dbModule, 'closeDatabaseConnection').mockImplementation(async () => {});
         try {
             await connectToDatabase();
         } catch (error) {
-            // If MongoDB is not available, we can still test the routes
             console.warn('MongoDB connection failed in tests, continuing without DB');
         }
     });
