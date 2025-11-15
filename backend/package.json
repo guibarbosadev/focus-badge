@@ -1,0 +1,11 @@
+{
+  "name": "@focusbadge/backend",
+  "version": "0.0.0",
+  "private": true,
+  "description": "API and worker services that keep FocusBadge sessions authoritative.",
+  "type": "module",
+  "scripts": {
+    "dev": "node ./src/index.js",
+    "start": "NODE_ENV=production node ./src/index.js"
+  }
+}

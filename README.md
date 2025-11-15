@@ -1,86 +1,36 @@
-# 🎯 FocusBadge
+# FocusBadge Monorepo
 
-**FocusBadge** is a minimalist browser extension that helps you stay focused and accountable during work/study hours — with integrity.
+FocusBadge keeps people accountable to their own focus goals. A browser extension blocks distracting sites, pings a backend to attest that the session is still healthy, and publishes a public badge page that proves when you last stayed on track.
 
-No distractions. No excuses. Just your word and your badge.
+This repository is being split into four focused workspaces so the browser extension, backend services, marketing/static site, and shared packages can evolve together.
 
----
+## Repository Layout
 
-## 🧠 How It Works
+- `extension/` — cross-browser WebExtension that enforces blocking rules and communicates with the backend.
+- `backend/` — APIs for creating/updating sessions, device registration, badge rendering, and scheduled jobs.
+- `site/` — marketing site plus public badge route (`focusbadge.com/{badgeId}`).
+- `common/` — shared packages such as TypeScript types, validation helpers, and networking utilities.
 
-1. **Create a Focus Session**  
-   - Define which sites to block (e.g., YouTube, Reddit, etc.)
-   - Set the days and time ranges for when these sites should be blocked
+Each subdirectory now contains its own tooling (package.json + scripts) so it can be developed or deployed independently. Check each folder’s README for local instructions.
 
-2. **Lock the Session**  
-   - Once a session starts, the configuration is locked
-   - You can only add more sites — no edits or removals allowed
+## Product Vision
 
-3. **Automatic Server Pings**  
-   - During your active focus hours, the extension pings our server hourly
-   - If the session is interrupted (disabled, uninstalled, config tampered, etc.) the session is marked as **stained**
+1. **Create a focus session** by selecting websites to block and optionally setting an end date. Every session captures an immutable list of URLs and device fingerprints.
+2. **Enforce integrity** — once a session starts you cannot remove sites or disable blocking locally without staining the record. Only additions are allowed.
+3. **Ping the backend** at a regular cadence. The backend stores “last checked” timestamps, flags missing devices, and retires configs that no longer exist on the device.
+4. **Publish a badge** at `focusbadge.com/{badgeId}` to showcase your streak. Anyone can inspect if the latest session is clean or stained.
 
-4. **Your Public Badge**  
-   - Each device has a public badge page
-   - It shows last session check time.
-   - Use it to prove your focus streak or keep yourself publicly accountable
+## Planning Questions
 
----
+Please confirm the following before implementation:
 
-## ✅ Integrity Rules
+1. Which browsers/platforms must the extension support at launch (Chrome MV3, Firefox, Safari, etc.) and what are the release targets?
+2. Where and how should we persist local session data (browser storage, IndexedDB, encrypted store) and how long must it survive reinstalls?
+3. What authentication or device registration mechanism should the backend enforce so only trusted extensions can update sessions?
+4. What schema should define a session and the “device general specifications” payload (fields, size limits, privacy constraints)?
+5. How should the extension fingerprint a device while respecting privacy (OS info, browser info, UUID, hash strategy)?
+6. How frequently should the extension ping the backend and what should happen when it is offline or sleeping?
+7. How do we reconcile backend-sent configs with local reality (e.g., marking remote sessions removed vs. still active) and what conflicts must be handled?
+8. Should the badge page be static (compiled site) or rendered dynamically by the backend, and what information is safe to show publicly?
 
-- You cannot pause a session once started
-- Disabling or uninstalling the extension stains the session
-- Reinstalling or reactivating with the same device and config hash resumes clean session — if pings were consistent
-- You can only add new websites to the config. Removing a site ends the session.
-
-
-If you really want to stay focused, wear your badge with pride.
-
----
-
-## 🛠 Tech Stack
-
-- JavaScript / WebExtension APIs
-- Node.js + Express (server)
-- RESTful API
-- Device-based session tracking
-
-## ✅  Minimal Version Checklist
-
-### 🔌 Offline Functionality (Client-side only)
-
-#### 💾 Session Setup (Local)
-- [ ] Save blocked sites list (locally)
-- [ ] Save custom device name
-- [ ] Save blocking time range
-- [ ] Generate a config hash (based on deviceId + config)
-
-#### 🚫 Site Blocking Logic
-- [ ] Block based on site list
-- [ ] Allow subdomain blocking (`*.domain.com`)
-- [ ] Block only during defined time range
-- [ ] Beautify the block page (custom HTML/CSS)
-
-#### 🔒 Session Rules & Integrity
-- [ ] Lock config after session starts (no edits allowed)
-- [ ] Allow only *new* domains to be added to block list
-- [ ] Prevent "pause" or reconfiguration during session
-- [ ] Detect reactivation (on re-enable/extension reload)
-- [ ] Store session info locally (even when offline)
-- [ ] Handle reboots or computer off scenarios gracefully
-
----
-
-### 🌐 Backend Integration (API required)
-
-#### 🆕 Session Management
-- [ ] `POST /sessions/start` — Save new session
-- [ ] `POST /sessions/:id/send-ping` — Hourly ping to confirm session is alive
-- [ ] `POST /sessions/:id/mark-ok` — Mark session as successfully completed
-- [ ] `POST /sessions/:id/mark-stained` — Mark session as failed/interrupted
-- [ ] `POST /sessions/validate` — Extension checks if it should stain a session (e.g. on startup/reactivation)
-
-#### 📛 Public Badge
-- [ ] `GET /u/:deviceId` — Show public session status
-- [ ] Dynamic return HTML(/session/:sessionHash) returning  session status: `ok`, `stained`, `none`, as well the last check time
+Let me know the answers (referencing the number for each) so we can lock the architecture prior to coding.

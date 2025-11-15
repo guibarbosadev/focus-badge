@@ -1,0 +1,19 @@
+{
+  "name": "@focusbadge/common",
+  "version": "0.0.0",
+  "description": "Shared types and utilities for FocusBadge apps.",
+  "private": true,
+  "type": "module",
+  "exports": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\""
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

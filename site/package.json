@@ -1,0 +1,11 @@
+{
+  "name": "@focusbadge/site",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Marketing site and badge host for FocusBadge.",
+  "scripts": {
+    "dev": "node ./scripts/dev-server.js",
+    "start": "node ./scripts/dev-server.js",
+    "build": "node ./scripts/build.js"
+  }
+}
