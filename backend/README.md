@@ -10,10 +10,50 @@ API and worker services that keep FocusBadge sessions authoritative. The backend
 
 ## Development
 
+### Setup
+
+1. Install dependencies:
 ```bash
 cd backend
-npm install   # no dependencies yet, but keeps parity
-npm run dev   # runs src/index.js placeholder server
+npm install
+```
+
+2. Set up environment variables:
+Create a `.env` file in the `backend` directory with the following variables:
+```env
+PORT=3000
+NODE_ENV=development
+MONGODB_URI=mongodb://localhost:27017/focusbadge
+```
+
+### Running
+
+- **Development mode** (with hot reload):
+```bash
+npm run dev
+```
+
+- **Production mode**:
+```bash
+npm run build
+npm start
+```
+
+### Testing
+
+- Run tests:
+```bash
+npm test
+```
+
+- Run tests in watch mode:
+```bash
+npm run test:watch
+```
+
+- Run tests with coverage:
+```bash
+npm run test:coverage
 ```
 
 ## TODO
