@@ -19,3 +19,5 @@ export interface SessionConfig {
 }
 
 export const VERSION = "0.0.0-development";
+
+export * from './auth';
