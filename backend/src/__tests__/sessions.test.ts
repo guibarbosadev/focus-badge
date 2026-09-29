@@ -2,6 +2,7 @@ import request from "supertest";
 import app from "../index.js";
 import * as dbModule from "../config/database.js";
 import { signToken } from "../utils/jwt.js";
+import { badgeState } from "../routes/badge/index.js";
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || "test-secret";
 
@@ -121,5 +122,23 @@ describe("Sessions routes", () => {
         expect(json.status).toBe(200);
         expect(json.body.badge.id).toBe(body.session.id);
         expect(json.body.badge.blockedSites).toBeUndefined();
+        expect(json.body.state.label).toBe("Focusing — clean");
+
+        const html = await request(app)
+            .get(`/badge/${body.session.id}`)
+            .set("Accept", "text/html");
+        expect(html.type).toBe("text/html");
+        expect(html.text).not.toContain("a.com");
+        expect(html.text).not.toContain("<script>x</script>");
+    });
+
+    it("marks stale or never-finished sessions as unverified", () => {
+        const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+        const base = { id: "x", startDate: hoursAgo(10), status: "active" as const };
+        expect(badgeState({ ...base, lastCheckedAt: hoursAgo(1) }).label).toBe("Focusing — clean");
+        expect(badgeState({ ...base, lastCheckedAt: hoursAgo(5) }).label).toBe("Unverified");
+        expect(
+            badgeState({ ...base, lastCheckedAt: hoursAgo(1), endDate: hoursAgo(0.5) }).label
+        ).toBe("Unverified");
     });
 });
