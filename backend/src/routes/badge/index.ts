@@ -11,7 +11,7 @@ const router = express.Router();
 router.get("/:sessionId", async (req: Request, res: Response) => {
     const sessionId = req.params.sessionId;
 
-    const db = getDatabase();
+    const db = await getDatabase();
     if (!db) return res.status(500).json({ error: "Database not initialized" });
 
     const sessions = db.collection("sessions");

@@ -47,7 +47,7 @@ describe("Sessions routes", () => {
     } as any;
 
     beforeAll(() => {
-        jest.spyOn(dbModule, "getDatabase").mockReturnValue(fakeDb as any);
+        jest.spyOn(dbModule, "getDatabase").mockResolvedValue(fakeDb as any);
     });
 
     afterAll(() => {

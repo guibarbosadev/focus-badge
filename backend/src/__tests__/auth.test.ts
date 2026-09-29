@@ -48,7 +48,7 @@ describe("Auth routes", () => {
             collection: jest.fn().mockReturnValue(usersCollection),
         } as unknown as any;
 
-        jest.spyOn(dbModule, "getDatabase").mockReturnValue(fakeDb);
+        jest.spyOn(dbModule, "getDatabase").mockResolvedValue(fakeDb);
     });
 
     afterAll(() => {

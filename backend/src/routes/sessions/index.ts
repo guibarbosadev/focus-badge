@@ -52,7 +52,7 @@ router.post("/", requireAuth, async (req: Request, res: Response) => {
     const auth = (req as any).auth;
     const ownerId = auth.userId as string;
 
-    const db = getDatabase();
+    const db = await getDatabase();
     if (!db) return res.status(500).json({ error: "Database not initialized" });
 
     const sessions = db.collection("sessions");
@@ -87,7 +87,7 @@ router.post("/:id/ping", requireAuth, async (req: Request, res: Response) => {
     const ownerId = auth.userId as string;
     const sessionId = req.params.id;
 
-    const db = getDatabase();
+    const db = await getDatabase();
     if (!db) return res.status(500).json({ error: "Database not initialized" });
 
     const sessions = db.collection("sessions");
@@ -127,7 +127,7 @@ router.patch(
         if (!allowed.includes(status))
             return res.status(400).json({ error: "Invalid status" });
 
-        const db = getDatabase();
+        const db = await getDatabase();
         if (!db)
             return res.status(500).json({ error: "Database not initialized" });
 

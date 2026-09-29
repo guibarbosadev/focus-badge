@@ -36,7 +36,7 @@ router.post("/google", async (req: Request, res: Response) => {
         const picture = payload.picture as string | undefined;
 
         // Persist or update user in our DB
-        const db = getDatabase();
+        const db = await getDatabase();
         if (!db)
             return res.status(500).json({ error: "Database not initialized" });
 

@@ -58,7 +58,8 @@ export async function closeDatabaseConnection(): Promise<void> {
     }
 }
 
-export function getDatabase(): Db | null {
-    return cachedDb;
+// Lazy connect: serverless cold starts can hit a route before any startup connect finishes.
+export async function getDatabase(): Promise<Db | null> {
+    return connectToDatabase().catch(() => null);
 }
 
