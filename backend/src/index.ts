@@ -31,9 +31,10 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 // Only start server when not running tests. Jest sets `JEST_WORKER_ID` in the environment.
+// On Vercel the platform invokes the exported app; listening would be wrong there.
 const isTestEnv =
     process.env.JEST_WORKER_ID !== undefined || process.env.NODE_ENV === "test";
-if (!isTestEnv) {
+if (!isTestEnv && !process.env.VERCEL) {
     // Initialize database connection
     connectToDatabase().catch((error) => {
         console.error("Failed to initialize database connection:", error);
