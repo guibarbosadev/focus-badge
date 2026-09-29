@@ -2,100 +2,39 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FocusBadge</title>
-    <style>
-      :root {
-        color-scheme: light;
-        --bg: #f5f6f7;
-        --card-bg: #fff;
-        --text: #1f2933;
-        --muted: #5f6b7c;
-        --border: #d9dde3;
-        --primary: #1a73e8;
-        --primary-hover: #1559b3;
-        --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-        font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont,
-          sans-serif;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        min-width: 280px;
-        background: var(--bg);
-        color: var(--text);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 16px;
-      }
-      .card {
-        width: 100%;
-        background: var(--card-bg);
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: var(--shadow);
-        text-align: center;
-      }
-      h1 {
-        margin: 0 0 8px;
-        font-size: 20px;
-        font-weight: 600;
-      }
-      p {
-        margin: 0 0 16px;
-        font-size: 14px;
-        color: var(--muted);
-      }
-      button {
-        width: 100%;
-        border-radius: 8px;
-        border: none;
-        padding: 10px 16px;
-        font-size: 15px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.2s ease, color 0.2s ease;
-      }
-      button + button {
-        margin-top: 10px;
-      }
-      button.primary {
-        background: var(--primary);
-        color: #fff;
-      }
-      button.primary:hover,
-      button.primary:focus {
-        background: var(--primary-hover);
-      }
-      button.secondary {
-        background: transparent;
-        border: 1px solid var(--border);
-        color: var(--text);
-      }
-      button.secondary:hover,
-      button.secondary:focus {
-        border-color: var(--primary);
-        color: var(--primary);
-      }
-      .status {
-        margin-top: 12px;
-        font-size: 13px;
-        color: var(--muted);
-      }
-    </style>
+    <link rel="stylesheet" href="../ui.css" />
+    <style>body { width: 320px; }</style>
   </head>
   <body>
     <div class="card">
       <h1>FocusBadge</h1>
-      <p>Sign in to sync your sessions before opening the control panel.</p>
-      <button id="googleLogin" class="primary">Continue with Google</button>
-      <button id="options" class="secondary">Open Options</button>
-      <div class="status" id="authStatus">You are signed out.</div>
+
+      <section id="signedOut" hidden>
+        <p>Sign in to start a focus session and publish your badge.</p>
+        <button id="login" class="primary">Continue with Google</button>
+      </section>
+
+      <section id="idle" hidden>
+        <p id="lastResult">No session running.</p>
+        <button id="start" class="primary">Start a focus session</button>
+      </section>
+
+      <section id="running" hidden>
+        <h2 id="sessionName"></h2>
+        <span id="sessionStatus" class="pill"></span>
+        <p id="sessionInfo" class="status"></p>
+        <button id="copyBadge" class="primary">Copy badge link</button>
+        <button id="openBadge">Open badge</button>
+        <button id="manage">Add sites</button>
+        <button id="end" class="danger">End session early</button>
+      </section>
+
+      <button id="logout" hidden>Sign out</button>
+      <div id="message" class="status" role="status"></div>
     </div>
-    <!-- Fixed button text -->
-    <script src="./popup.js"></script>
+    <script src="../config.js"></script>
+    <script src="../lib.js"></script>
+    <script src="popup.js"></script>
   </body>
 </html>
