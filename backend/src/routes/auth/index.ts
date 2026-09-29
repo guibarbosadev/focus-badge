@@ -13,7 +13,10 @@ import type {
 
 const router = express.Router();
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+// Without an audience check, ID tokens minted for any Google app would be accepted.
+if (!GOOGLE_CLIENT_ID && process.env.NODE_ENV === "production")
+    throw new Error("GOOGLE_CLIENT_ID is required in production");
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 // POST /auth/google
@@ -25,7 +28,7 @@ router.post("/google", async (req: Request, res: Response) => {
     try {
         const ticket = await client.verifyIdToken({
             idToken,
-            audience: GOOGLE_CLIENT_ID || undefined,
+            audience: GOOGLE_CLIENT_ID,
         });
         const payload = ticket.getPayload();
         if (!payload) return res.status(401).json({ error: "Invalid idToken" });

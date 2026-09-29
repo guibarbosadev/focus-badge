@@ -4,6 +4,8 @@ import type { AuthTokenPayload } from "../../../common/src/auth.js";
 
 dotenv.config();
 
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production")
+    throw new Error("JWT_SECRET is required in production");
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
