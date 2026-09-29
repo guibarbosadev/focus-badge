@@ -6,48 +6,36 @@ import { signToken } from "../utils/jwt.js";
 process.env.JWT_SECRET = process.env.JWT_SECRET || "test-secret";
 
 describe("Sessions routes", () => {
-    let store: Record<string, any> = {};
+    const store: Record<string, any> = {};
     const sessionsCollection = {
         insertOne: jest.fn(async (doc: any) => {
             store[doc.id] = { ...doc };
             return { insertedId: doc.id };
         }),
-        findOne: jest.fn(async (filter: any) => {
-            if (filter.id) return store[filter.id] || null;
-            if (filter.ownerId) {
-                // return first matching
-                const keys = Object.keys(store);
-                for (const k of keys) {
-                    if (store[k].ownerId === filter.ownerId) return store[k];
-                }
-            }
-            return null;
-        }),
+        findOne: jest.fn(async (filter: any) => store[filter.id] ?? null),
         updateOne: jest.fn(async (filter: any, update: any) => {
-            const s = store[filter.id];
-            if (!s) return { matchedCount: 0 };
-            if (update.$set) Object.assign(s, update.$set);
-            store[filter.id] = s;
+            Object.assign(store[filter.id], update.$set);
             return { matchedCount: 1 };
         }),
-        find: jest.fn(() => ({
-            sort: () => ({
-                limit: () => ({
-                    toArray: async () => Object.values(store),
-                }),
-            }),
-        })),
     } as any;
 
-    const fakeDb = {
-        collection: jest.fn((name: string) => {
-            if (name === "sessions") return sessionsCollection;
-            return null;
-        }),
-    } as any;
+    const fakeDb = { collection: jest.fn(() => sessionsCollection) } as any;
+    const owner = () => `Bearer ${signToken({ userId: "user-1", provider: "google" })}`;
+    const stranger = () => `Bearer ${signToken({ userId: "user-2", provider: "google" })}`;
+
+    const create = (body: any = {}) =>
+        request(app)
+            .post("/session")
+            .set("Authorization", owner())
+            .send({
+                blockedSites: ["a.com", " B.com "],
+                name: "<script>x</script>",
+                device: { deviceId: "dev-1" },
+                ...body,
+            });
 
     beforeAll(() => {
-        jest.spyOn(dbModule, "getDatabase").mockResolvedValue(fakeDb as any);
+        jest.spyOn(dbModule, "getDatabase").mockResolvedValue(fakeDb);
     });
 
     afterAll(() => {
@@ -55,71 +43,83 @@ describe("Sessions routes", () => {
     });
 
     it("rejects invalid session payload", async () => {
-        const token = signToken({ userId: "user-1", provider: "google" });
         const res = await request(app)
             .post("/session")
-            .set("Authorization", `Bearer ${token}`)
-            .send({});
+            .set("Authorization", owner())
+            .send({ blockedSites: [], endDate: "2000-01-01" });
         expect(res.status).toBe(400);
+        expect(res.body.details).toHaveLength(3);
     });
 
-    it("creates a session and returns it", async () => {
-        const token = signToken({ userId: "user-1", provider: "google" });
-        const payload = {
-            id: "session-1",
-            blockedSites: ["a.com"],
-            startDate: new Date().toISOString(),
-            status: "active",
-            device: { deviceId: "dev-1", label: "Laptop" },
-            existsLocally: true,
-        };
-        const res = await request(app)
-            .post("/session")
-            .set("Authorization", `Bearer ${token}`)
-            .send(payload);
+    it("creates an active session with a server-generated id", async () => {
+        const res = await create({ id: "client-id", status: "completed" });
         expect(res.status).toBe(201);
-        expect(res.body.session).toBeDefined();
-        expect(res.body.session.id).toBe(payload.id);
+        expect(res.body.session.id).not.toBe("client-id");
+        expect(res.body.session.status).toBe("active");
+        expect(res.body.session.blockedSites).toEqual(["a.com", "b.com"]);
     });
 
-    it("allows owner to ping and updates lastCheckedAt", async () => {
-        const token = signToken({ userId: "user-1", provider: "google" });
+    it("merges additions on ping and refreshes the token", async () => {
+        const { body } = await create();
         const res = await request(app)
-            .post("/session/session-1/ping")
-            .set("Authorization", `Bearer ${token}`)
-            .send();
+            .post(`/session/${body.session.id}/ping`)
+            .set("Authorization", owner())
+            .send({ blockedSites: ["a.com", "b.com", "c.com"] });
         expect(res.status).toBe(200);
-        expect(res.body.session.lastCheckedAt).toBeDefined();
+        expect(res.body.session.status).toBe("active");
+        expect(res.body.session.blockedSites).toEqual(["a.com", "b.com", "c.com"]);
+        expect(typeof res.body.token).toBe("string");
     });
 
-    it("prevents other users from updating session", async () => {
-        const token = signToken({ userId: "user-2", provider: "google" });
+    it("stains the session when a site is removed", async () => {
+        const { body } = await create();
         const res = await request(app)
-            .post("/session/session-1/ping")
-            .set("Authorization", `Bearer ${token}`)
-            .send();
-        expect(res.status).toBe(403);
+            .post(`/session/${body.session.id}/ping`)
+            .set("Authorization", owner())
+            .send({ blockedSites: ["a.com"] });
+        expect(res.body.session.status).toBe("stained");
+        expect(res.body.session.stainReason).toContain("b.com");
+        // canonical list keeps the removed site
+        expect(res.body.session.blockedSites).toEqual(["a.com", "b.com"]);
     });
 
-    it("allows owner to change status to removed and sets endDate", async () => {
-        const token = signToken({ userId: "user-1", provider: "google" });
+    it("completes the session on the first ping after endDate", async () => {
+        const { body } = await create({ endDate: new Date(Date.now() + 60_000).toISOString() });
+        store[body.session.id].endDate = new Date(Date.now() - 1000).toISOString();
         const res = await request(app)
-            .patch("/session/session-1/status")
-            .set("Authorization", `Bearer ${token}`)
-            .send({ status: "removed" });
-        expect(res.status).toBe(200);
+            .post(`/session/${body.session.id}/ping`)
+            .set("Authorization", owner())
+            .send({ blockedSites: ["a.com", "b.com"] });
+        expect(res.body.session.status).toBe("completed");
+    });
+
+    it("prevents other users from pinging or ending the session", async () => {
+        const { body } = await create();
+        const ping = await request(app)
+            .post(`/session/${body.session.id}/ping`)
+            .set("Authorization", stranger())
+            .send({ blockedSites: [] });
+        const end = await request(app)
+            .post(`/session/${body.session.id}/end`)
+            .set("Authorization", stranger());
+        expect(ping.status).toBe(403);
+        expect(end.status).toBe(403);
+    });
+
+    it("lets the owner end the session early", async () => {
+        const { body } = await create();
+        const res = await request(app)
+            .post(`/session/${body.session.id}/end`)
+            .set("Authorization", owner());
         expect(res.body.session.status).toBe("removed");
         expect(res.body.session.endDate).toBeDefined();
     });
 
-    it("returns badge for owner", async () => {
-        const token = signToken({ userId: "user-1", provider: "google" });
-        const res = await request(app)
-            .get("/badge/session-1")
-            .set("Authorization", `Bearer ${token}`)
-            .send();
-        expect(res.status).toBe(200);
-        expect(res.body.badge).toBeDefined();
-        expect(res.body.badge.id).toBe("session-1");
+    it("serves a public badge without the blocklist", async () => {
+        const { body } = await create();
+        const json = await request(app).get(`/badge/${body.session.id}`);
+        expect(json.status).toBe(200);
+        expect(json.body.badge.id).toBe(body.session.id);
+        expect(json.body.badge.blockedSites).toBeUndefined();
     });
 });

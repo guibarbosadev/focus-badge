@@ -1,151 +1,128 @@
 import express, { Request, Response } from "express";
+import { randomUUID } from "node:crypto";
 import { getDatabase } from "../../config/database.js";
 import { requireAuth } from "../../middleware/authMiddleware.js";
-import type { SessionConfig } from "../../../../common/src/index.js";
-import type {
-    SessionDocument,
-    SessionBadge,
-} from "../../../../common/src/session.js";
+import { signToken } from "../../utils/jwt.js";
+import type { SessionDocument } from "../../../../common/src/session.js";
 
 const router = express.Router();
 
-function isISODateString(v: any) {
-    return typeof v === "string" && !Number.isNaN(Date.parse(v));
+const MAX_SITES = 1000;
+const MAX_NAME = 100;
+
+// Returns a normalized, deduped host list, or null when the input is not a list of strings.
+export function parseSites(value: unknown): string[] | null {
+    if (!Array.isArray(value) || value.length > MAX_SITES) return null;
+    if (!value.every((v) => typeof v === "string" && v.length <= 253))
+        return null;
+    const sites = value.map((v: string) => v.trim().toLowerCase()).filter(Boolean);
+    return [...new Set(sites)];
 }
 
-function validateSessionPayload(body: any): {
-    valid: boolean;
-    errors?: string[];
-} {
-    const errors: string[] = [];
-    if (!body) {
-        errors.push("Missing body");
-        return { valid: false, errors };
+function isFutureISODate(v: unknown) {
+    return typeof v === "string" && Date.parse(v) > Date.now();
+}
+
+// Integrity rule: sites can be added but never removed. The backend list is canonical.
+export function reconcile(session: SessionDocument, reported: string[]) {
+    const missing = session.blockedSites.filter((s) => !reported.includes(s));
+    const added = reported.filter((s) => !session.blockedSites.includes(s));
+    const update: Partial<SessionDocument> = {
+        lastCheckedAt: new Date().toISOString(),
+        blockedSites: [...session.blockedSites, ...added],
+    };
+    if (session.status === "active" && missing.length) {
+        update.status = "stained";
+        update.stainReason = `Removed from blocklist: ${missing.join(", ")}`;
+    } else if (
+        session.status === "active" &&
+        session.endDate &&
+        Date.parse(session.endDate) <= Date.now()
+    ) {
+        update.status = "completed";
     }
-    if (!body.id || typeof body.id !== "string")
-        errors.push("id is required (string)");
-    if (!Array.isArray(body.blockedSites))
-        errors.push("blockedSites must be an array");
-    if (!body.startDate || !isISODateString(body.startDate))
-        errors.push("startDate must be an ISO date string");
-    if (!body.status || typeof body.status !== "string")
-        errors.push("status is required");
-    if (
-        !body.device ||
-        typeof body.device !== "object" ||
-        !body.device.deviceId
-    )
-        errors.push("device.deviceId is required");
-    if (typeof body.existsLocally !== "boolean")
-        errors.push("existsLocally must be boolean");
-    return { valid: errors.length === 0, errors };
+    return update;
 }
 
-// POST /sessions - register a session (owner is the authenticated user)
+// POST /session - start a session (owner is the authenticated user)
+// body: { blockedSites: string[], name?, endDate?, device: { deviceId, label?, os?, browser? } }
 router.post("/", requireAuth, async (req: Request, res: Response) => {
-    const { valid, errors } = validateSessionPayload(req.body);
-    if (!valid)
-        return res
-            .status(400)
-            .json({ error: "Invalid payload", details: errors });
-
-    const auth = (req as any).auth;
-    const ownerId = auth.userId as string;
+    const body = req.body || {};
+    const errors: string[] = [];
+    const blockedSites = parseSites(body.blockedSites);
+    if (!blockedSites?.length)
+        errors.push("blockedSites must be a non-empty array of hosts");
+    if (body.name !== undefined && (typeof body.name !== "string" || body.name.length > MAX_NAME))
+        errors.push(`name must be a string up to ${MAX_NAME} chars`);
+    if (body.endDate !== undefined && !isFutureISODate(body.endDate))
+        errors.push("endDate must be a future ISO date string");
+    if (typeof body.device?.deviceId !== "string")
+        errors.push("device.deviceId is required");
+    if (errors.length)
+        return res.status(400).json({ error: "Invalid payload", details: errors });
 
     const db = await getDatabase();
     if (!db) return res.status(500).json({ error: "Database not initialized" });
 
-    const sessions = db.collection("sessions");
     const now = new Date().toISOString();
-
-    const sessionDoc: SessionDocument = {
-        ownerId,
-        blockedSites: req.body.blockedSites,
-        id: req.body.id,
-        startDate: req.body.startDate,
-        lastCheckedAt: req.body.lastCheckedAt,
-        endDate: req.body.endDate,
-        status: req.body.status,
-        device: req.body.device,
-        existsLocally: req.body.existsLocally,
+    const { deviceId, label, os, browser } = body.device;
+    const session: SessionDocument = {
+        id: randomUUID(),
+        ownerId: (req as any).auth.userId,
+        name: body.name,
+        blockedSites: blockedSites!,
+        startDate: now,
+        lastCheckedAt: now,
+        endDate: body.endDate,
+        status: "active",
+        device: { deviceId, label, os, browser },
         createdAt: now,
-    } as unknown as SessionDocument;
-
-    try {
-        await sessions.insertOne(sessionDoc as any);
-        // Return the stored session (full)
-        return res.status(201).json({ session: sessionDoc });
-    } catch (err: any) {
-        console.error("Failed to create session", err);
-        return res.status(500).json({ error: "Failed to create session" });
-    }
+    };
+    await db.collection("sessions").insertOne({ ...session });
+    return res.status(201).json({ session });
 });
 
-// POST /sessions/:id/ping - update lastCheckedAt
+// POST /session/:id/ping - heartbeat; body: { blockedSites: string[] }
+// Returns the canonical session plus a refreshed token so active devices stay signed in.
 router.post("/:id/ping", requireAuth, async (req: Request, res: Response) => {
     const auth = (req as any).auth;
-    const ownerId = auth.userId as string;
-    const sessionId = req.params.id;
+    const reported = parseSites(req.body?.blockedSites);
+    if (!reported)
+        return res.status(400).json({ error: "blockedSites must be an array of hosts" });
 
     const db = await getDatabase();
     if (!db) return res.status(500).json({ error: "Database not initialized" });
 
     const sessions = db.collection("sessions");
-    const now = new Date().toISOString();
-
-    const existing = await sessions.findOne({ id: sessionId });
+    const existing = (await sessions.findOne({ id: req.params.id })) as unknown as SessionDocument | null;
     if (!existing) return res.status(404).json({ error: "Session not found" });
-    if (existing.ownerId !== ownerId)
+    if (existing.ownerId !== auth.userId)
         return res.status(403).json({ error: "Forbidden" });
 
-    await sessions.updateOne(
-        { id: sessionId },
-        { $set: { lastCheckedAt: now } }
-    );
-    const updated = await sessions.findOne({ id: sessionId });
-    return res.json({ session: updated });
+    const token = signToken({ userId: auth.userId, provider: auth.provider });
+    if (existing.status === "removed" || existing.status === "completed")
+        return res.json({ session: existing, token });
+
+    const update = reconcile(existing, reported);
+    await sessions.updateOne({ id: existing.id }, { $set: update });
+    return res.json({ session: { ...existing, ...update }, token });
 });
 
-// PATCH /sessions/:id/status - update status field (stained/removed)
-router.patch(
-    "/:id/status",
-    requireAuth,
-    async (req: Request, res: Response) => {
-        const auth = (req as any).auth;
-        const ownerId = auth.userId as string;
-        const sessionId = req.params.id;
-        const { status } = req.body || {};
-        if (!status || typeof status !== "string")
-            return res.status(400).json({ error: "Missing status" });
-        const allowed = [
-            "stained",
-            "removed",
-            "active",
-            "completed",
-            "scheduled",
-        ];
-        if (!allowed.includes(status))
-            return res.status(400).json({ error: "Invalid status" });
+// POST /session/:id/end - owner gives up the session early; it shows as "removed" on the badge.
+router.post("/:id/end", requireAuth, async (req: Request, res: Response) => {
+    const db = await getDatabase();
+    if (!db) return res.status(500).json({ error: "Database not initialized" });
 
-        const db = await getDatabase();
-        if (!db)
-            return res.status(500).json({ error: "Database not initialized" });
+    const sessions = db.collection("sessions");
+    const existing = (await sessions.findOne({ id: req.params.id })) as unknown as SessionDocument | null;
+    if (!existing) return res.status(404).json({ error: "Session not found" });
+    if (existing.ownerId !== (req as any).auth.userId)
+        return res.status(403).json({ error: "Forbidden" });
+    if (existing.status !== "active") return res.json({ session: existing });
 
-        const sessions = db.collection("sessions");
-        const existing = await sessions.findOne({ id: sessionId });
-        if (!existing)
-            return res.status(404).json({ error: "Session not found" });
-        if (existing.ownerId !== ownerId)
-            return res.status(403).json({ error: "Forbidden" });
-
-        const update: any = { status };
-        if (status === "removed" || status === "completed")
-            update.endDate = new Date().toISOString();
-
-        await sessions.updateOne({ id: sessionId }, { $set: update });
-        const updated = await sessions.findOne({ id: sessionId });
-        return res.json({ session: updated });
-    }
-);
+    const update = { status: "removed" as const, endDate: new Date().toISOString() };
+    await sessions.updateOne({ id: existing.id }, { $set: update });
+    return res.json({ session: { ...existing, ...update } });
+});
 
 export default router;

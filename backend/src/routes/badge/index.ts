@@ -21,12 +21,11 @@ router.get("/:sessionId", async (req: Request, res: Response) => {
 
     const badge: SessionBadge = {
         id: s.id,
+        name: s.name,
         startDate: s.startDate,
         lastCheckedAt: s.lastCheckedAt,
         endDate: s.endDate,
         status: s.status,
-        device: { deviceId: s.device.deviceId, label: s.device.label },
-        existsLocally: s.existsLocally,
     };
 
     return res.json({ badge });

@@ -1,14 +1,9 @@
-import type { SessionConfig, DeviceSpecs } from "./index.js";
+import type { SessionConfig } from "./index.js";
 
 export type SessionBadge = Pick<
     SessionConfig,
-    | "id"
-    | "startDate"
-    | "lastCheckedAt"
-    | "endDate"
-    | "status"
-    | "existsLocally"
-> & { device: Pick<DeviceSpecs, "deviceId" | "label"> };
+    "id" | "name" | "startDate" | "lastCheckedAt" | "endDate" | "status"
+>;
 
 export interface SessionDocument extends SessionConfig {
     ownerId: string; // user id who owns this session

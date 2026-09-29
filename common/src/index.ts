@@ -1,5 +1,4 @@
 export type SessionStatus =
-    | "scheduled"
     | "active"
     | "completed"
     | "stained"
@@ -14,13 +13,14 @@ export interface DeviceSpecs {
 
 export interface SessionConfig {
     id: string;
-    blockedSites: string[];
+    name?: string;
+    blockedSites: string[]; // private, never exposed on the badge
     startDate: string;
     lastCheckedAt?: string;
     endDate?: string;
     status: SessionStatus;
+    stainReason?: string;
     device: DeviceSpecs;
-    existsLocally: boolean;
 }
 
 export const VERSION = "0.0.0-development";
