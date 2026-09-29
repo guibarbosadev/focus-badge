@@ -1,0 +1,48 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f5f6f7;
+  --card: #fff;
+  --text: #1f2933;
+  --muted: #5f6b7c;
+  --border: #d9dde3;
+  --primary: #1a73e8;
+  --primary-hover: #1559b3;
+  --good: #1e8e3e;
+  --bad: #c5221f;
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --border: #334155;
+    --primary: #60a5fa;
+    --primary-hover: #93c5fd;
+    --good: #4ade80;
+    --bad: #f87171;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); padding: 16px; }
+[hidden] { display: none !important; }
+.card { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08); }
+h1 { margin: 0 0 8px; font-size: 20px; }
+h2 { margin: 0 0 4px; font-size: 16px; }
+p { margin: 0 0 12px; color: var(--muted); }
+label { display: block; margin: 12px 0 4px; font-weight: 600; }
+input, textarea { width: 100%; padding: 8px; font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; }
+button { width: 100%; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text); padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; margin-top: 10px; }
+button:hover, button:focus-visible { border-color: var(--primary); color: var(--primary); }
+button.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+button.primary:hover, button.primary:focus-visible { background: var(--primary-hover); color: #fff; }
+button:disabled { opacity: 0.6; cursor: default; }
+.danger { color: var(--bad); }
+.status { margin-top: 12px; font-size: 13px; color: var(--muted); }
+.pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; background: var(--bg); }
+.pill.active { color: var(--good); }
+.pill.stained { color: var(--bad); }
+ul { padding-left: 18px; margin: 8px 0; }
+.row { display: flex; gap: 8px; }
+.row button { width: auto; margin-top: 0; }

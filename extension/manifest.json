@@ -1,40 +1,53 @@
 {
   "manifest_version": 2,
   "name": "FocusBadge",
-  "version": "1.0",
-  "description": "FocusBadge is a minimalist browser extension that helps you stay focused and accountable during work/study hours — with integrity",
-  "applications": {
+  "version": "1.0.0",
+  "description": "Block distracting sites and prove it: a public badge shows whether your focus session stayed clean.",
+  "homepage_url": "https://focusbadge.com",
+  "browser_specific_settings": {
     "gecko": {
-      "id": "focusbadge@focusbadge.com"
+      "id": "focusbadge@focusbadge.com",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": [
+          "personallyIdentifyingInfo",
+          "browsingActivity"
+        ]
+      }
+    },
+    "gecko_android": {
+      "strict_min_version": "142.0"
     }
   },
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg"
+  },
   "permissions": [
+    "alarms",
     "identity",
     "storage",
-    "https://accounts.google.com/*",
-    "http://localhost:3000/*"
+    "webRequest",
+    "webRequestBlocking",
+    "<all_urls>"
   ],
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "run_at": "document_start",
-      "js": ["script.js"]
-    }
+  "background": {
+    "scripts": [
+      "src/config.js",
+      "src/lib.js",
+      "src/background.js"
+    ]
+  },
+  "web_accessible_resources": [
+    "src/blocked/blocked.html"
   ],
   "options_ui": {
     "page": "src/options/options.html",
     "open_in_tab": true
   },
   "browser_action": {
+    "default_title": "FocusBadge",
     "default_popup": "src/popup/popup.html",
-    "default_icon": {
-      "16": "icons/icon-16.png",
-      "48": "icons/icon-48.png",
-      "128": "icons/icon-128.png"
-    }
-  },
-  "focusbadge": {
-    "apiBaseUrl": "http://localhost:3000",
-    "googleClientId": "458044860120-prq5t0h11e543c90lq9hqd4l3748n25u.apps.googleusercontent.com"
+    "default_icon": "icons/icon.svg"
   }
 }
