@@ -36,7 +36,13 @@ export async function connectToDatabase(): Promise<Db> {
         });
 
         await client.connect();
-        cachedDb = client.db();
+        const db = client.db();
+        // Idempotent; runs once per cold start.
+        await Promise.all([
+            db.collection('sessions').createIndex({ id: 1 }, { unique: true }),
+            db.collection('users').createIndex({ provider: 1, providerId: 1 }, { unique: true }),
+        ]);
+        cachedDb = db;
         cachedClient = client;
         console.log('Connected to MongoDB (serverless mode)');
         return cachedDb;
