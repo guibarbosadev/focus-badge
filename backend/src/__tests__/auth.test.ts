@@ -39,7 +39,7 @@ describe("Auth routes", () => {
                             createdAt: new Date().toISOString(),
                             lastLoginAt: new Date().toISOString(),
                         };
-                        return { value: userDoc };
+                        return userDoc;
                     }
                 ),
         };

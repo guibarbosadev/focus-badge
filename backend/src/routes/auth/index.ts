@@ -57,17 +57,17 @@ router.post("/google", async (req: Request, res: Response) => {
             },
         };
 
-        const result = await users.findOneAndUpdate(
+        // mongodb v6+ returns the document itself, not { value }
+        const userDoc: any = await users.findOneAndUpdate(
             { provider: "google", providerId: googleSub },
             update,
             { upsert: true, returnDocument: "after" }
         );
-        if (!result || !result.value) {
+        if (!userDoc) {
             return res
                 .status(500)
                 .json({ error: "Failed to create or fetch user" });
         }
-        const userDoc = result.value as any;
 
         const user: UserProfile = {
             id: userDoc._id.toString(),
